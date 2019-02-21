@@ -5,6 +5,8 @@ Based on [LHCHXSWG-INT-2017-01](https://cds.cern.ch/record/2290628/files/LHCHXSW
 
 Requires workspace file `results.root` generated from [CombinedLimit](https://github.com/cms-analysis/HiggsAnalysis-CombinedLimit) tool using EFT physics model.
 
+You need to create a measurement file to (eg as in the `HIG_18_029.py` asimov data example)
+
 You must run inside the `HiggsAnalysis/CombinedLimit` area inside `CMSSW` (to access model workspace)
 
    * Run with `python eftfitter.py`, which reads in the results from `HIG_18_029.py`.
