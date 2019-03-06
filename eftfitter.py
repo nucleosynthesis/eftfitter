@@ -3,12 +3,12 @@ from scipy.optimize import minimize
 from scipy import linalg 
 import array,numpy,sys
 from matplotlib import pyplot as plt
-
-import HIG_18_029 as model 
+import matplotlib.cm as cm 
 
 import ROOT as r 
 
 VERB=False
+
 
 class eft_fitter:
   def __init__(self, EFT_PARAMETERS):   # for now lets just play, user interface later
@@ -18,14 +18,6 @@ class eft_fitter:
     fw = r.TFile.Open("result.root")    
     self.w = fw.Get("w")    
   
-    self.X = model.X
-
-    correlation = model.correlation 
-
-    # symmetrize the errors 
-    error_vector = model.error_vector
-
-
     self.EFT = {
     "clW_x02"           :[[-5 , 5    ]		,0]
     ,"cHu_x02"          :[[-1.1 , 1.1]		,0]
@@ -35,7 +27,7 @@ class eft_fitter:
     ,"cH_x01"           :[[-1.4 , 1.94]		,0]
     ,"cpHL_x02"         :[[-5 , 5]		,0]
     ,"c2B"              :[[-5 , 5 ] 		,0]
-    ,"cG_x04"           :[[-40. , 40.]		,0]
+    ,"cG_x04"           :[[-30. , 30.]		,0]
     ,"tcA_x04"          :[[-12 , 12 	]	,0]
     ,"cT_x03"           :[[-4.3 , 3.3 ] 	,0]
     ,"tc3W_x01"         :[[-1.8 , 1.8  ]	,0]
@@ -44,7 +36,7 @@ class eft_fitter:
     ,"cHud_x02"         :[[-5 , 5  	]	,0]
     ,"cHe_x03"          :[[-1.8 , 0.25] 	,0]
     ,"cA_x04"           :[[-11 , 2.2 ]		,0]
-    ,"cWWMinuscB_x03"   :[[-35 , 8  	]	,0]
+    ,"cWWMinuscB_x03"   :[[-35 , 30  	]	,0]
     ,"tcHB_x01"         :[[-2.4 , 2.4]		,0]
     ,"cHQ_x03"          :[[-1.9 , 6.9 ] 	,0]
     ,"c3W_x02"          :[[-8.3 , 4.5  ]	,0]
@@ -67,21 +59,56 @@ class eft_fitter:
     ,"cuG_x02"          :[[-5 , 5	]	,0]
     ,"tc3G_x04"         :[[-1.6 , 1.6]		,0]
     }
- 
+    
+    self.MODELS = []
 
-    # do some squarification and inverting 
-    self.nbins = len(self.X.items())
-    v = correlation
-    self.square_correlation = [v[i:i+self.nbins] for i in range(0,len(v),self.nbins)]
-    self.variance = error_vector
-    self.square_covariance = [ [ self.square_correlation[i][j] * (self.variance[i]*self.variance[j])\
-					  for i in range(self.nbins)]\
-					  for j in range(self.nbins)]
+  def processModel(self,model,decay):
 
-    self.err_mat = numpy.array(self.square_covariance)
-    self.err_mat = linalg.inv(self.err_mat)
+   # make weights sum to 1
+   for x in model.X.items():
+    names = x[1][0] 
+    if len(names) == 0: 
+       x[1][0] = names = [[1.,x[0]]]
+    elif len(names) == 0: 
+       x[1][0][0] = 1. 
+    else: 
+     tsc=0
+     for name in names: 
+	  weight = float(name[0])
+	  tsc+=weight
+     for i in range(len(names)): 
+	  x[1][0][i][0] /= tsc # renormalise
 
-    self.prep()
+
+   # covert the correlation dict into a matrix 
+   ccorr = []
+   for x in model.X.items():
+    for y in model.X.items(): 
+    
+      rho = model.correlation[(x[0],y[0])]
+      #print x[0],y[0],rho 
+      ccorr.append(rho)
+
+   model.correlation = array.array('d',ccorr)
+   model.decay = decay 
+
+   # symmetrize the errors 
+   error_vector = []  
+   for x in model.X.items(): error_vector.append(x[1][3])
+
+   # do some squarification and inverting 
+   model.nbins = len(model.X.items())
+   v = model.correlation
+   model.square_correlation = [v[i:i+model.nbins] for i in range(0,len(v),model.nbins)]
+   model.variance = error_vector
+   model.square_covariance = [ [ model.square_correlation[i][j] * (model.variance[i]*model.variance[j])\
+				    for i in range(model.nbins)]\
+				    for j in range(model.nbins)]
+
+   model.err_mat = numpy.array(model.square_covariance)
+   model.err_mat = linalg.inv(model.err_mat)
+   # finally lets make all of the names extend with _decay 
+   self.MODELS.append(model)
 
 
   def print_EFT(self):
@@ -92,13 +119,17 @@ class eft_fitter:
 
   def print_X(self):
     print " ---- STXS Parameter Values ---- " 
-    for x in self.X.items():
-      print "%s = %g (measured), %g (predicted at EFT values) "%(x[0],x[1][1],x[1][2])
+    for i,M in enumerate(self.MODELS): 
+      X = M.X
+      print "Data set %d"%i
+      for x in X.items():
+       print "%s = %g +/- %g (measured), %g (predicted at EFT values) "%(x[0]+"_"+M.decay,x[1][2],x[1][3],x[1][1])
     print " ------------------------------ " 
 
-  def get_x0(self):
-    
-    return [x[1][1] for x in self.X.items()]
+  def get_x0(self,MINDEX):
+   
+    X = self.MODELS[MINDEX].X
+    return [x[1][2] for x in X.items()]
 
   ############## Dummy Function to test Gaussian Constraint! #####################
   """
@@ -117,13 +148,14 @@ class eft_fitter:
     return [x[1][2] for x in self.X.items()]
   """
   
-  def calculate_x(self,vals): 
-    if VERB: print " Setting following (to recalculate STXS bins) --> " , vals
+  def get_x(self,vals,MINDEX,include_names=False): 
+    #if VERB: print " Setting following (to recalculate STXS bins) --> " , vals
     for v in vals:
       self.EFT[v[0]][1] = v[1]
       self.w.var(v[0]).setVal(v[1])      
 
-    for x in self.X.items():
+    model = self.MODELS[MINDEX] 
+    for x in model.X.items():
       names = x[1][0] 
       if not len(names) : 
       	names = [[1.,x[0]]]
@@ -132,24 +164,37 @@ class eft_fitter:
       for name in names: 
         weight = float(name[0])
 	name = name[1]
-        sc = self.w.function("stxs1toeft_scaling_%s_hgg_13TeV"%name).getVal(r.RooArgSet())
+        sc = self.w.function("stxs1toeft_scaling_%s_%s_13TeV"%(name,model.decay)).getVal(r.RooArgSet())
 	tsc+=weight*sc 
-      self.X[x[0]][2]=tsc
-    return [x[1][2] for x in self.X.items()]
+      model.X[x[0]][1]=tsc
+    #if VERB: 
+    #  self.print_EFT()
+    #  self.print_X()
+    if include_names: return [(x[0]+"_"+model.decay,x[1][1]) for x in model.X.items()]
+    else : return [x[1][1] for x in model.X.items()]
   
+  def calculate_x(self,vals): 
+    if VERB: print " Setting following (to recalculate STXS bins) --> " , vals
+    for i in range(len(self.MODELS)): self.get_x(vals,i)
+    if VERB:
+     self.print_EFT()
+     self.print_X()
 
   def neg_log_likelihood(self,ECFG,*args):
     #print " my current EFT ", E
     args= args[0]
     #print ECFG
     E = [ [i,e] for i,e in zip(args['eft_keys'],ECFG)]
-    x  = self.calculate_x(E)
-    x0 = self.get_x0()
 
-    xarr  = numpy.array([xx-xx0 for xx,xx0 in zip(x,x0)])
-    xarrT = xarr.T
+    constr=0
+    for i, M in enumerate(self.MODELS):
+      x  = self.get_x(E,i)
+      x0 = self.get_x0(i)
 
-    constr = 0.5*(xarrT.dot(self.err_mat.dot(xarr)))
+      xarr  = numpy.array([xx-xx0 for xx,xx0 in zip(x,x0)])
+      xarrT = xarr.T
+
+      constr += 0.5*(xarrT.dot(M.err_mat.dot(xarr)))
     
     return constr
  
@@ -158,7 +203,7 @@ class eft_fitter:
    if constrained:
      self.EFT[params_list[0]][1]=rv
      E=[[e[0],float(e[1][1])] for e in self.EFT.items()]
-     x  = self.calculate_x(E)
+     self.calculate_x(E)
 
    self.EFT_safe = self.EFT.copy()
 
@@ -196,22 +241,30 @@ class eft_fitter:
     #print self.calculate_x([0 for i in self.EFT.items()])
     # 2. remove the useless parameters from the list (user asks for only some of them anyway)
 
-    # make a weird ROOT file of the results why not ?
     fi = r.TFile("inputs_converted.root","RECREATE")
-    hcorr = r.TH2F("h2corr","Correlations",self.nbins,0,self.nbins,self.nbins,0,self.nbins)
-    hgr   = r.TH1F("hgr","Fitted values",self.nbins,0,self.nbins)
-    hgr.SetMarkerStyle(20); hgr.SetMarkerSize(1.0); hgr.SetLineWidth(3)
-    for i,x in enumerate(self.X.items()): 
+    for i,M in enumerate(self.MODELS): 
+     d = fi.mkdir("DataSet_%d"%i)
+     # make a weird ROOT file of the results why not ?
+     hcorr = r.TH2F("h2corr","Correlations",M.nbins,0,M.nbins,M.nbins,0,M.nbins)
+     hcov  = r.TH2F("h2cov","Covariance",M.nbins,0,M.nbins,M.nbins,0,M.nbins)
+     hgr   = r.TH1F("hgr","Fitted values",M.nbins,0,M.nbins)
+     hgr.SetMarkerStyle(20); hgr.SetMarkerSize(1.0); hgr.SetLineWidth(3)
+     for i,x in enumerate(M.X.items()): 
       hgr.SetBinContent(i+1,x[1][1])
-      hgr.SetBinError(i+1,self.variance[i])
+      hgr.SetBinError(i+1,M.variance[i])
       hgr.GetXaxis().SetBinLabel(i+1,x[0])
       hcorr.GetXaxis().SetBinLabel(i+1,x[0])
-      for j,y in enumerate(self.X.items()):
+      hcov.GetXaxis().SetBinLabel(i+1,x[0])
+      for j,y in enumerate(M.X.items()):
         hcorr.GetYaxis().SetBinLabel(j+1,y[0])
-        hcorr.SetBinContent(i+1,j+1,self.square_correlation[i][j])
-    fi.cd()
-    hcorr.Write()
-    hgr.Write() 
+        hcorr.SetBinContent(i+1,j+1,M.square_correlation[i][j])
+        hcov.GetYaxis().SetBinLabel(j+1,y[0])
+        hcov.SetBinContent(i+1,j+1,M.square_covariance[i][j])
+     hgr.GetYaxis().SetTitle("#mu #pm #sigma") 
+     d.cd()
+     hcorr.Write()
+     hcov.Write()
+     hgr.Write() 
 
     self.EFT = dict(E for E in filter(lambda x: x[0] in self.EFT_PARAMETERS, self.EFT.items()))
 
@@ -259,11 +312,17 @@ class eft_fitter:
     # always start and end with a reset in any scan
     self.reset()
 
+
     a2D = plt.subplot(111)
-    plt.contourf(yy,xx,C,levels=numpy.arange(0,6,0.2))  # the way I constructed C, y, is the faster variable (think like a matrix)
+    conts = plt.contour(yy,xx,C,levels=[2.3,5.99], colors='b')  # the way I constructed C, y, is the faster variable (think like a matrix)
+    plt.clabel(conts, fontsize=9, inline=1)
+    plt.contourf(yy,xx,C,levels=numpy.arange(0,6,0.2),cmap=cm.gray)  # the way I constructed C, y, is the faster variable (think like a matrix)
     plt.colorbar()
     a2D.set_ylabel(px)
     a2D.set_xlabel(py)
+    a2D.axhline(0., linestyle='--', color='k') # horizontal lines
+    a2D.axvline(0., linestyle='--', color='k') # vertical lines
+
     plt.savefig("scan_2d_%s_%s.pdf"%(px,py));
     plt.savefig("scan_2d_%s_%s.png"%(px,py));
     
@@ -272,9 +331,8 @@ class eft_fitter:
     plt.close()
         
     
-    
-  def scan(self,param,do_profile=True): 
-    
+  
+  def scan_LH(self,param, R,do_profile=True): 
     # make a 1D scan of a particular EFT parameter, choose whether to profile remaining parameters or leave at 0 
     self.reset()
     if param not in self.EFT.keys() :
@@ -289,46 +347,139 @@ class eft_fitter:
     #if do_profile : print "List of profiled EFT params ? -> ", filter(lambda x: x not in params_list, self.EFT.keys())
     #else: print "Fixing all other EFT parameters in scan -> " ,filter(lambda x: x not in [param], self.EFT.keys())
     
-    np = 40
-    R = numpy.linspace(pv[0][0],pv[0][1],np)
-
     # in the scan, keep track of the scaling functions ... 
     scalers = []
+    proc_scalers = []
     C = []
     for r in R : 
-      scaler = []
-      if do_profile : C.append(self.minimizer(rv=r,constrained=True,params_list=[param])[1])
+      if do_profile : 
+        res = self.minimizer(rv=r,constrained=True,params_list=[param])
+        C.append(res[1])
+	scalers.append(res[0])
       else: C.append(2*self.neg_log_likelihood([r],{'eft_keys':[param]}) )
-      if VERB : self.print_X()
+      # now for every process, get the value of it 
+      pscaler = []
+      for MINDEX in range(len(self.MODELS)): 
+        items = self.get_x([[param,r]],MINDEX,True)
+	for item in items: pscaler.append(item)
+      proc_scalers.append(pscaler)
+      if VERB : 
+        self.calculate_x([ [e[0],e[1][1]] for e in self.EFT.items() ])
+	self.print_EFT()
+        self.print_X()
+   
+    self.reset()
+    return C,scalers,proc_scalers
+
+  def scan(self,param): 
+    
+
+    """
       for x in self.X.items(): 
 	scaler.append(x[1][2]) 
       scalers.append(scaler)
+    """
+    pv = self.EFT[param]
+    np = 40
+    R = numpy.linspace(pv[0][0],pv[0][1],np)
 
-    self.reset()
+    C_RES_PROF  = self.scan_LH(param,R,1)
+    C_RES_FIXED = self.scan_LH(param,R,0)
 
+    C_prof  = C_RES_PROF[0]
+    C_fixed = C_RES_FIXED[0]
+
+    profiled_POIs = C_RES_PROF[1]
+    scaling_functions = C_RES_FIXED[2]
+    
     fig, ax1 = plt.subplots()
-    ax1.plot(R,C,color='black',linewidth=3,linestyle='--')
-    ax1.set_ylabel("-2 Log(L)",fontsize=20)
+    ax1.plot(R,C_prof,color='black',linewidth=3,linestyle='-',label="Profiled")
+    ax1.plot(R,C_fixed,color='black',linewidth=3,linestyle='--',label="Scan")
+
+    ax1.set_ylabel("$\chi^{2}$",fontsize=20)
     ax1.set_xlabel("%s"%param,fontsize=20)
     #plt.show()
+    if param in ["cG_x04","cHW_x02"]: 
+      plt.ylim(0,10)
     
-    ax2 = ax1.twinx()
-    for i,x in enumerate(self.X.items()): ax2.plot(R,[scalers[j][i] for j in range(len(R))], label=x[0])
-    ax2.set_ylabel("bin scaling")
+    if len(profiled_POIs[0]):
+      ax2 = ax1.twinx()
+      poilabels = []
+      for P in [ p[0] for p in profiled_POIs[0] ]: poilabels.append(P)
+      for i,P in enumerate(poilabels):
+        vals = [p[i][1] for p in profiled_POIs]
+        ax2.plot(R,vals, label=P)
+        
+        
+      
+      #for i,x in enumerate(self.X.items()): ax2.plot(R,[scalers[j][i] for j in range(len(R))], label=x[0])
+      ax2.set_ylabel("Profiled EFT coeff.")
+      ax2.legend(fontsize=9,loc=0)
 
-    ax2.legend(fontsize=9,loc=0)
-    plt.savefig("%s_%g.pdf"%(param,do_profile))
-    plt.savefig("%s_%g.png"%(param,do_profile))
+    ax1.axvline(0., linestyle='--', color='k') # horizontal lines
+    ax1.legend(fontsize=9,loc=1)
+    plt.savefig("%s.pdf"%(param))
+    plt.savefig("%s.png"%(param))
      
     plt.clf()
     plt.cla()
     plt.close()
 
-#EFT_PARAMETERS = ["cG_x04","cA_x04","cu_x02","cHW_x02","cWWMinuscB_x03"] 
-EFT_PARAMETERS = ["cG_x04","cHW_x02","cWWMinuscB_x03"] 
+    fig, ax1 = plt.subplots()
+    styles = [".","v","+","o","*"]
+    if len(scaling_functions): 
+      scalers = []
+      for P in [ p[0] for p in scaling_functions[0] ]: scalers.append(P)
+      for i,P in enumerate(scalers):
+        vals = [p[i][1] for p in scaling_functions]
+        ax1.plot(R,vals,styles[i//7], label=P)
+
+      ax1.set_ylabel("$\mu$",fontsize=20)
+      ax1.set_xlabel("%s"%param,fontsize=20)
+      box = ax1.get_position()
+      ax1.set_position([box.x0, box.y0, box.width * 0.8, box.height])
+
+      # Put a legend to the right of the current axis
+      ax1.legend(loc='center left', bbox_to_anchor=(1, 0.5),fontsize=7)
+      plt.savefig("stxs_scaling_vs_%s.pdf"%(param))
+      plt.savefig("stxs_scaling_vs_%s.png"%(param))
+      
+      plt.clf()
+      plt.cla()
+      plt.close()
+
+
+################### Import datasets ##############
+
+import HIG_16_040 as model_stxs0_hgg 
+import HIG_18_029 as model_stxs1_hgg 
+import HIG_19_001 as model_stxs_h4l   
+#import HIG_18_029_only_ggH0J as model_hggonebin 
+################# Pick EFT parameters to care about and make the fitter
+EFT_PARAMETERS = ["cG_x04","cA_x04","cu_x02","cHW_x02","cWWMinuscB_x03"] 
+#EFT_PARAMETERS = ["cG_x04","cHW_x02","cWWMinuscB_x03"] 
 fitter = eft_fitter(EFT_PARAMETERS)
+
+############### CHOOSE YOUR DATA SETS TO INCLUDE, no correlations between them ##############
+#fitter.processModel(model_hggonebin,"hgg")
+fitter.processModel(model_stxs1_hgg,"hgg")
+fitter.processModel(model_stxs0_hgg,"hgg")
+fitter.processModel(model_stxs_h4l,"hzz")
+#############################################################################################
+
+fitter.prep()
+
 #fitter.scan("cu_x02",0)
-for e in EFT_PARAMETERS: fitter.scan(e,0)
-for e in EFT_PARAMETERS: fitter.scan(e,1)
+#fitter.scan("cG_x04")
+#sys.exit()
+#fitter.scan("cWWMinuscB_x03")
+for e in EFT_PARAMETERS: fitter.scan(e)
 fitter.scan2d("cG_x04","cHW_x02")
+fitter.scan2d("cWWMinuscB_x03","cHW_x02")
+fitter.scan2d("cWWMinuscB_x03","cG_x04")
+fitter.scan2d("cu_x02","cG_x04")
+fitter.scan2d("cA_x04","cG_x04")
+fitter.scan2d("cA_x04","cHW_x02")
+fitter.scan2d("cA_x04","cWWMinuscB_x03")
+fitter.scan2d("cHW_x02","cu_x02")
 
