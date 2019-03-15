@@ -19,45 +19,45 @@ class eft_fitter:
     self.w = fw.Get("w")    
   
     self.EFT = {
-    "clW_x02"           :[[-5 , 5    ]		,0]
-    ,"cHu_x02"          :[[-1.1 , 1.1]		,0]
-    ,"c2W"              :[[-5 , 5  	]	,0]
-    ,"cl"               :[[-5 , 5  	]	,0]
-    ,"cdG_x02"          :[[-5 , 5  	]	,0]
-    ,"cH_x01"           :[[-1.4 , 1.94]		,0]
-    ,"cpHL_x02"         :[[-5 , 5]		,0]
-    ,"c2B"              :[[-5 , 5 ] 		,0]
-    ,"cG_x04"           :[[-30. , 30.]		,0]
-    ,"tcA_x04"          :[[-12 , 12 	]	,0]
-    ,"cT_x03"           :[[-4.3 , 3.3 ] 	,0]
-    ,"tc3W_x01"         :[[-1.8 , 1.8  ]	,0]
-    ,"cWWPluscB_x03"    :[[-3.3 , 1.8  ]	,0]
-    ,"cpHQ_x03"         :[[-4.4 , 4.4  ]	,0]
-    ,"cHud_x02"         :[[-5 , 5  	]	,0]
-    ,"cHe_x03"          :[[-1.8 , 0.25] 	,0]
-    ,"cA_x04"           :[[-11 , 2.2 ]		,0]
-    ,"cWWMinuscB_x03"   :[[-35 , 30  	]	,0]
-    ,"tcHB_x01"         :[[-2.4 , 2.4]		,0]
-    ,"cHQ_x03"          :[[-1.9 , 6.9 ] 	,0]
-    ,"c3W_x02"          :[[-8.3 , 4.5  ]	,0]
-    ,"cuB_x02"          :[[-5 , 5 	]	,0]
-    ,"c2G_x04"          :[[-1.6 , 1.6 ] 	,0]
-    ,"cu_x02"           :[[-8.4 , 15.5 ]	,0]
-    ,"cHB_x02"          :[[-4.5 , 7.5  ]	,0]
-    ,"c3G_x04"          :[[-1.6 , 1.6  ]	,0]
-    ,"cdW_x02"          :[[-5 , 5  	]	,0]
-    ,"cHW_x02"          :[[-3.5 , 10.5]		,0]
-    ,"c6"               :[[-5 , 5  	]	,0]
-    ,"tcHW_x02"         :[[-6 , 6  	]	,0]
-    ,"tcG_x04"          :[[-1.2 , 1.2]		,0]
-    ,"cHL_x02"          :[[-5 , 5  	]	,0]
-    ,"cdB_x02"          :[[-5 , 5  	]	,0]
-    ,"cuW_x02"          :[[-5 , 5  	]	,0]
-    ,"cHd_x02"          :[[-4.2 , 0.44] 	,0]
-    ,"cd_x02"           :[[-19.8 , 8.8 ]	,0]
-    ,"clB_x02"          :[[-5 , 5  	]	,0]
-    ,"cuG_x02"          :[[-5 , 5	]	,0]
-    ,"tc3G_x04"         :[[-1.6 , 1.6]		,0]
+    "clW_x02"           :[[-5 , 5    ]		,0,0]    # current value and nominal / resettable value 
+    ,"cHu_x02"          :[[-1.1 , 1.1]		,0,0]
+    ,"c2W"              :[[-5 , 5  	]	,0,0]
+    ,"cl"               :[[-5 , 5  	]	,0,0]
+    ,"cdG_x02"          :[[-5 , 5  	]	,0,0]
+    ,"cH_x01"           :[[-1.4 , 1.94]		,0,0]
+    ,"cpHL_x02"         :[[-5 , 5]		,0,0]
+    ,"c2B"              :[[-5 , 5 ] 		,0,0]
+    ,"cG_x04"           :[[-50. , 40.]		,0,0]
+    ,"tcA_x04"          :[[-12 , 12 	]	,0,0]
+    ,"cT_x03"           :[[-4.3 , 3.3 ] 	,0,0]
+    ,"tc3W_x01"         :[[-1.8 , 1.8  ]	,0,0]
+    ,"cWWPluscB_x03"    :[[-3.3 , 1.8  ]	,0,0]
+    ,"cpHQ_x03"         :[[-4.4 , 4.4  ]	,0,0]
+    ,"cHud_x02"         :[[-5 , 5  	]	,0,0]
+    ,"cHe_x03"          :[[-1.8 , 0.25] 	,0,0]
+    ,"cA_x04"           :[[-10000 , 80000 ]		,0,0]
+    ,"cWWMinuscB_x03"   :[[-35 , 150  	]	,0,0]
+    ,"tcHB_x01"         :[[-2.4 , 2.4]		,0,0]
+    ,"cHQ_x03"          :[[-1.9 , 6.9 ] 	,0,0]
+    ,"c3W_x02"          :[[-8.3 , 4.5  ]	,0,0]
+    ,"cuB_x02"          :[[-5 , 5 	]	,0,0]
+    ,"c2G_x04"          :[[-1.6 , 1.6 ] 	,0,0]
+    ,"cu_x02"           :[[-40. , 20. ]		,0,0]
+    ,"cHB_x02"          :[[-4.5 , 7.5  ]	,0,0]
+    ,"c3G_x04"          :[[-1.6 , 1.6  ]	,0,0]
+    ,"cdW_x02"          :[[-5 , 5  	]	,0,0]
+    ,"cHW_x02"          :[[-20. , 30.]		,0,0]
+    ,"c6"               :[[-5 , 5  	]	,0,0]
+    ,"tcHW_x02"         :[[-6 , 6  	]	,0,0]
+    ,"tcG_x04"          :[[-1.2 , 1.2]		,0,0]
+    ,"cHL_x02"          :[[-5 , 5  	]	,0,0]
+    ,"cdB_x02"          :[[-5 , 5  	]	,0,0]
+    ,"cuW_x02"          :[[-5 , 5  	]	,0,0]
+    ,"cHd_x02"          :[[-4.2 , 0.44] 	,0,0]
+    ,"cd_x02"           :[[-19.8 , 8.8 ]	,0,0]
+    ,"clB_x02"          :[[-5 , 5  	]	,0,0]
+    ,"cuG_x02"          :[[-5 , 5	]	,0,0]
+    ,"tc3G_x04"         :[[-1.6 , 1.6]		,0,0]
     }
     
     self.MODELS = []
@@ -84,8 +84,9 @@ class eft_fitter:
    ccorr = []
    for x in model.X.items():
     for y in model.X.items(): 
-    
-      rho = model.correlation[(x[0],y[0])]
+      if (x[0],y[0]) in model.correlation.keys() :
+         rho = model.correlation[(x[0],y[0])]
+      else: rho = model.correlation[(y[0],x[0])] 
       #print x[0],y[0],rho 
       ccorr.append(rho)
 
@@ -164,7 +165,13 @@ class eft_fitter:
       for name in names: 
         weight = float(name[0])
 	name = name[1]
-        sc = self.w.function("stxs1toeft_scaling_%s_%s_13TeV"%(name,model.decay)).getVal(r.RooArgSet())
+	if "BR" in name: # in this case, we have a ratio of ratios model, expect parameter BR_hxx_BR_hyy 
+	  Bxx = name.split("BR_")[1] 
+	  Byy = name.split("BR_")[2] 
+	  nom  = self.w.function("scaling_%s"%(Bxx)).getVal(r.RooArgSet())
+	  dnom = self.w.function("scaling_%s"%(Byy)).getVal(r.RooArgSet())
+	  sc = nom/dnom
+	else: sc = self.w.function("stxs1toeft_scaling_%s_%s_13TeV"%(name,model.decay)).getVal(r.RooArgSet())
 	tsc+=weight*sc 
       model.X[x[0]][1]=tsc
     #if VERB: 
@@ -198,7 +205,7 @@ class eft_fitter:
     
     return constr
  
-  def minimizer(self,rv=0,constrained=True,params_list=[]):  # params_list is now list of POI
+  def minimizer(self,rv=0,constrained=False,params_list=[]):  # params_list is now list of POI
 
    if constrained:
      self.EFT[params_list[0]][1]=rv
@@ -215,7 +222,8 @@ class eft_fitter:
    init = [i[1] for i in init_CFG]
 
    if VERB: print "My EFT parameter llist is --> ", params_list
-   results = [params_list[0],rv]
+   results = []
+   if params_list: results = [params_list[0],rv]
 
    if len(init) :
         bounds = [(self.EFT[v][0][0],self.EFT[v][0][1]) for v in eft_keys['eft_keys']]
@@ -283,11 +291,12 @@ class eft_fitter:
   def global_fit(self): 
     best_fit,nll2 = self.minimizer()
     self.calculate_x(best_fit)      # Note that this also sets the values of the EFT vector to the ones from the fit!
+    for e in best_fit : self.EFT[e[0]][2]=e[1]
     self.print_EFT()
 
   def reset(self):
     # resets EFT parameters to 0 
-    self.calculate_x([[e,0] for e in self.EFT.keys()])
+    self.calculate_x([[e,self.EFT[e][2]] for e in self.EFT.keys()])
 
   def scan2d(self, px, py): # set do_profile off here!
     # make a 2D scan of a likelihood, don't profile other things !    
@@ -300,16 +309,20 @@ class eft_fitter:
     yy = numpy.linspace(pyy[0][0],pyy[0][1],np)
 
     C = []
+    minll = 99999999
     for i in range(np):
       cc = []
       for j in range(np):
         nll2 = 2*self.neg_log_likelihood([xx[i],yy[j]],{'eft_keys':[px,py]})
+	if nll2<minll: minll = nll2
         cc.append(nll2)
 	#print " -> ", xx[i],yy[j], nll2
       C.append(cc)
     C = numpy.array(C) 
     #print " ----> ? ", 0, 0, 2*self.neg_log_likelihood([0,0],{'eft_keys':[px,py]})
     # always start and end with a reset in any scan
+    for c in range(len(C)): 
+     for i in range(len(cc)): C[c][i] -= minll
     self.reset()
 
 
@@ -351,12 +364,17 @@ class eft_fitter:
     scalers = []
     proc_scalers = []
     C = []
+    minll = 9999
     for r in R : 
       if do_profile : 
         res = self.minimizer(rv=r,constrained=True,params_list=[param])
+	if res[1] < minll : minll = res[1]
         C.append(res[1])
 	scalers.append(res[0])
-      else: C.append(2*self.neg_log_likelihood([r],{'eft_keys':[param]}) )
+      else: 
+        res = 2*self.neg_log_likelihood([r],{'eft_keys':[param]}) 
+	if res< minll: minll = res
+      	C.append(res)
       # now for every process, get the value of it 
       pscaler = []
       for MINDEX in range(len(self.MODELS)): 
@@ -367,7 +385,7 @@ class eft_fitter:
         self.calculate_x([ [e[0],e[1][1]] for e in self.EFT.items() ])
 	self.print_EFT()
         self.print_X()
-   
+    C = [c-minll for c in C]
     self.reset()
     return C,scalers,proc_scalers
 
@@ -451,24 +469,28 @@ class eft_fitter:
 
 ################### Import datasets ##############
 
-import HIG_16_040 as model_stxs0_hgg 
-import HIG_18_029 as model_stxs1_hgg 
-import HIG_19_001 as model_stxs_h4l   
-#import HIG_18_029_only_ggH0J as model_hggonebin 
+import ATLAS36 as model 
+
+
 ################# Pick EFT parameters to care about and make the fitter
 EFT_PARAMETERS = ["cG_x04","cA_x04","cu_x02","cHW_x02","cWWMinuscB_x03"] 
 #EFT_PARAMETERS = ["cG_x04","cHW_x02","cWWMinuscB_x03"] 
 fitter = eft_fitter(EFT_PARAMETERS)
 
 ############### CHOOSE YOUR DATA SETS TO INCLUDE, no correlations between them ##############
-#fitter.processModel(model_hggonebin,"hgg")
-fitter.processModel(model_stxs1_hgg,"hgg")
-fitter.processModel(model_stxs0_hgg,"hgg")
-fitter.processModel(model_stxs_h4l,"hzz")
+fitter.processModel(model,"hzz")
+#fitter.processModel(model_stxs1_hgg,"hgg")
+#fitter.processModel(model_stxs0_hgg,"hgg")
+#fitter.processModel(model_stxs_h4l,"hzz")
 #############################################################################################
 
 fitter.prep()
-
+# Uncomment to set the other parameters in the model to their best fits in the fixed scans !
+"""
+fitter.global_fit()
+fitter.reset()  # < - Now the nominal is at the best fits!
+"""
+# -------------------------------------------------------
 #fitter.scan("cu_x02",0)
 #fitter.scan("cG_x04")
 #sys.exit()
