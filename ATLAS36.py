@@ -1,8 +1,7 @@
-# numbers interpreted from ATLAS H->4l + H->gg combination @ 36/fb - https://atlas.web.cern.ch/Atlas/GROUPS/PHYSICS/CONFNOTES/ATLAS-CONF-2017-047/
-
+import array
 # last numbers are measured, symmetric error, leave as 1!
 X = {
-   'BRhggBRhzz' 		    : [[[1,'BRhggBRhzz']]			, 1.,0.690607734807 , 0.13812154696]
+   'BRhggBRhzz' 		    : [[[1,'BR_hggBR_hzz']]			, 1.,0.690607734807 , 0.13812154696]
    ,'ggH_0J'                        : [[]					, 1.,1.07608695652 , 0.253623188406]
    ,'ggH_1J_low'              	    : [[[1,'ggH_1J_PTH_0_60']          ]	, 1.,0.666666666667 , 0.70454545454]
    ,'ggH_1J_med'	    	    : [[[1,'ggH_1J_PTH_60_120']	       ]	, 1.,1.0 , 0.565217391304          ]

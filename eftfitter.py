@@ -14,52 +14,7 @@ class eft_fitter:
   def __init__(self, EFT_PARAMETERS):   # for now lets just play, user interface later
     
     self.EFT_PARAMETERS = EFT_PARAMETERS 
-
-    fw = r.TFile.Open("result.root")    
-    self.w = fw.Get("w")    
   
-    self.EFT = {
-    "clW_x02"           :[[-5 , 5    ]		,0,0]    # current value and nominal / resettable value 
-    ,"cHu_x02"          :[[-1.1 , 1.1]		,0,0]
-    ,"c2W"              :[[-5 , 5  	]	,0,0]
-    ,"cl"               :[[-5 , 5  	]	,0,0]
-    ,"cdG_x02"          :[[-5 , 5  	]	,0,0]
-    ,"cH_x01"           :[[-1.4 , 1.94]		,0,0]
-    ,"cpHL_x02"         :[[-5 , 5]		,0,0]
-    ,"c2B"              :[[-5 , 5 ] 		,0,0]
-    ,"cG_x04"           :[[-50. , 40.]		,0,0]
-    ,"tcA_x04"          :[[-12 , 12 	]	,0,0]
-    ,"cT_x03"           :[[-4.3 , 3.3 ] 	,0,0]
-    ,"tc3W_x01"         :[[-1.8 , 1.8  ]	,0,0]
-    ,"cWWPluscB_x03"    :[[-3.3 , 1.8  ]	,0,0]
-    ,"cpHQ_x03"         :[[-4.4 , 4.4  ]	,0,0]
-    ,"cHud_x02"         :[[-5 , 5  	]	,0,0]
-    ,"cHe_x03"          :[[-1.8 , 0.25] 	,0,0]
-    ,"cA_x04"           :[[-10000 , 80000 ]		,0,0]
-    ,"cWWMinuscB_x03"   :[[-35 , 150  	]	,0,0]
-    ,"tcHB_x01"         :[[-2.4 , 2.4]		,0,0]
-    ,"cHQ_x03"          :[[-1.9 , 6.9 ] 	,0,0]
-    ,"c3W_x02"          :[[-8.3 , 4.5  ]	,0,0]
-    ,"cuB_x02"          :[[-5 , 5 	]	,0,0]
-    ,"c2G_x04"          :[[-1.6 , 1.6 ] 	,0,0]
-    ,"cu_x02"           :[[-40. , 20. ]		,0,0]
-    ,"cHB_x02"          :[[-4.5 , 7.5  ]	,0,0]
-    ,"c3G_x04"          :[[-1.6 , 1.6  ]	,0,0]
-    ,"cdW_x02"          :[[-5 , 5  	]	,0,0]
-    ,"cHW_x02"          :[[-20. , 30.]		,0,0]
-    ,"c6"               :[[-5 , 5  	]	,0,0]
-    ,"tcHW_x02"         :[[-6 , 6  	]	,0,0]
-    ,"tcG_x04"          :[[-1.2 , 1.2]		,0,0]
-    ,"cHL_x02"          :[[-5 , 5  	]	,0,0]
-    ,"cdB_x02"          :[[-5 , 5  	]	,0,0]
-    ,"cuW_x02"          :[[-5 , 5  	]	,0,0]
-    ,"cHd_x02"          :[[-4.2 , 0.44] 	,0,0]
-    ,"cd_x02"           :[[-19.8 , 8.8 ]	,0,0]
-    ,"clB_x02"          :[[-5 , 5  	]	,0,0]
-    ,"cuG_x02"          :[[-5 , 5	]	,0,0]
-    ,"tc3G_x04"         :[[-1.6 , 1.6]		,0,0]
-    }
-    
     self.MODELS = []
 
   def processModel(self,model,decay):
@@ -165,13 +120,13 @@ class eft_fitter:
       for name in names: 
         weight = float(name[0])
 	name = name[1]
-	if "BR" in name: # in this case, we have a ratio of ratios model, expect parameter BR_hxx_BR_hyy 
+	if "BR" in name: # in this case, we have a ratio of ratios model, expect parameter BR_hxx_BR_hyy - THIS IS VERY SPECIFIC TO SOME MODELS ! 
 	  Bxx = name.split("BR_")[1] 
 	  Byy = name.split("BR_")[2] 
 	  nom  = self.w.function("scaling_%s"%(Bxx)).getVal(r.RooArgSet())
 	  dnom = self.w.function("scaling_%s"%(Byy)).getVal(r.RooArgSet())
 	  sc = nom/dnom
-	else: sc = self.w.function("stxs1toeft_scaling_%s_%s_13TeV"%(name,model.decay)).getVal(r.RooArgSet())
+	else: sc = self.w.function("%s_%s_%s_13TeV"%(self.scalefunctionstr,name,model.decay)).getVal(r.RooArgSet())
 	tsc+=weight*sc 
       model.X[x[0]][1]=tsc
     #if VERB: 
@@ -244,10 +199,15 @@ class eft_fitter:
 
    return results, 2*self.neg_log_likelihood([r[1] for r in results],eft_keys)
 
-  def prep(self):
+  def prep(self,config):
     # 1. Set all the things to 0 
     #print self.calculate_x([0 for i in self.EFT.items()])
     # 2. remove the useless parameters from the list (user asks for only some of them anyway)
+    self.EFT = config.PARAMS
+    fw = r.TFile.Open(config.COMBINE_WS)
+    self.w = fw.Get("w")     
+    
+    self.scalefunctionstr = config.SCALING_FUNC_STR
 
     fi = r.TFile("inputs_converted.root","RECREATE")
     for i,M in enumerate(self.MODELS): 
@@ -417,8 +377,8 @@ class eft_fitter:
     ax1.set_ylabel("$\chi^{2}$",fontsize=20)
     ax1.set_xlabel("%s"%param,fontsize=20)
     #plt.show()
-    if param in ["cG_x04","cHW_x02"]: 
-      plt.ylim(0,10)
+    #if param in ["cG_x04","cHW_x02"]: 
+    plt.ylim(0,10)
     
     if len(profiled_POIs[0]):
       ax2 = ax1.twinx()
@@ -434,8 +394,11 @@ class eft_fitter:
       ax2.set_ylabel("Profiled EFT coeff.")
       ax2.legend(fontsize=9,loc=0)
 
-    ax1.axvline(0., linestyle='--', color='k') # horizontal lines
+    ax1.axvline(0., linestyle='--', color='k') 
+    ax1.axhline(1., linestyle='--', color='r') # horizontal lines
+    ax1.axhline(4., linestyle='--', color='r') # horizontal lines
     ax1.legend(fontsize=9,loc=1)
+   
     plt.savefig("%s.pdf"%(param))
     plt.savefig("%s.png"%(param))
      
@@ -466,42 +429,4 @@ class eft_fitter:
       plt.cla()
       plt.close()
 
-
-################### Import datasets ##############
-
-import ATLAS36 as model 
-
-
-################# Pick EFT parameters to care about and make the fitter
-EFT_PARAMETERS = ["cG_x04","cA_x04","cu_x02","cHW_x02","cWWMinuscB_x03"] 
-#EFT_PARAMETERS = ["cG_x04","cHW_x02","cWWMinuscB_x03"] 
-fitter = eft_fitter(EFT_PARAMETERS)
-
-############### CHOOSE YOUR DATA SETS TO INCLUDE, no correlations between them ##############
-fitter.processModel(model,"hzz")
-#fitter.processModel(model_stxs1_hgg,"hgg")
-#fitter.processModel(model_stxs0_hgg,"hgg")
-#fitter.processModel(model_stxs_h4l,"hzz")
-#############################################################################################
-
-fitter.prep()
-# Uncomment to set the other parameters in the model to their best fits in the fixed scans !
-"""
-fitter.global_fit()
-fitter.reset()  # < - Now the nominal is at the best fits!
-"""
-# -------------------------------------------------------
-#fitter.scan("cu_x02",0)
-#fitter.scan("cG_x04")
-#sys.exit()
-#fitter.scan("cWWMinuscB_x03")
-for e in EFT_PARAMETERS: fitter.scan(e)
-fitter.scan2d("cG_x04","cHW_x02")
-fitter.scan2d("cWWMinuscB_x03","cHW_x02")
-fitter.scan2d("cWWMinuscB_x03","cG_x04")
-fitter.scan2d("cu_x02","cG_x04")
-fitter.scan2d("cA_x04","cG_x04")
-fitter.scan2d("cA_x04","cHW_x02")
-fitter.scan2d("cA_x04","cWWMinuscB_x03")
-fitter.scan2d("cHW_x02","cu_x02")
 
