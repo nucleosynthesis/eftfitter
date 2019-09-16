@@ -8,7 +8,11 @@ PARAMS = {
     ,"cH_x01"           :[[-1.4 , 1.94]		,0,0]
     ,"cpHL_x02"         :[[-5 , 5]		,0,0]
     ,"c2B"              :[[-5 , 5 ] 		,0,0]
-    ,"cGx16pi2_x04"     :[[-90. , 80.]		,0,0]
+    ,"cG_x05"     	:[[-10. ,10.]		,0,0]
+    ,"cA_x04"     	:[[-10 , 10 ]		,0,0]
+    ,"cWWMinuscB_x02"   :[[-15 , 15  	]	,0,0]
+    ,"cu_x01"           :[[-20. , 10. ]		,0,0]
+    ,"cuW_x02"          :[[-20. , 30.  	]	,0,0]
     ,"tcA_x04"          :[[-12 , 12 	]	,0,0]
     ,"cT_x03"           :[[-4.3 , 3.3 ] 	,0,0]
     ,"tc3W_x01"         :[[-1.8 , 1.8  ]	,0,0]
@@ -16,30 +20,32 @@ PARAMS = {
     ,"cpHQ_x03"         :[[-4.4 , 4.4  ]	,0,0]
     ,"cHud_x02"         :[[-5 , 5  	]	,0,0]
     ,"cHe_x03"          :[[-1.8 , 0.25] 	,0,0]
-    ,"cAx16pi2_x01"     :[[-2 , 2 ]		,0,0]
-    ,"cWWMinuscB_x03"   :[[-150 , 150  	]	,0,0]
     ,"tcHB_x01"         :[[-2.4 , 2.4]		,0,0]
     ,"cHQ_x03"          :[[-1.9 , 6.9 ] 	,0,0]
     ,"c3W_x02"          :[[-8.3 , 4.5  ]	,0,0]
     ,"cuB_x02"          :[[-5 , 5 	]	,0,0]
     ,"c2G_x04"          :[[-1.6 , 1.6 ] 	,0,0]
-    ,"cu_x02"           :[[-40. , 20. ]		,0,0]
     ,"cHB_x02"          :[[-4.5 , 7.5  ]	,0,0]
     ,"c3G_x04"          :[[-1.6 , 1.6  ]	,0,0]
     ,"cdW_x02"          :[[-5 , 5  	]	,0,0]
-    ,"cHW_x02"          :[[-20. , 30.]		,0,0]
+    ,"cHW_x02"          :[[-12. , 16.]		,0,0]
     ,"c6"               :[[-5 , 5  	]	,0,0]
     ,"tcHW_x02"         :[[-6 , 6  	]	,0,0]
     ,"tcG_x04"          :[[-1.2 , 1.2]		,0,0]
     ,"cHL_x02"          :[[-5 , 5  	]	,0,0]
     ,"cdB_x02"          :[[-5 , 5  	]	,0,0]
-    ,"cuW_x02"          :[[-5 , 5  	]	,0,0]
     ,"cHd_x02"          :[[-4.2 , 0.44] 	,0,0]
-    ,"cd_x02"           :[[-19.8 , 8.8 ]	,0,0]
+    ,"cd_x01"           :[[-20. , 10. ]		,0,0]
     ,"clB_x02"          :[[-5 , 5  	]	,0,0]
     ,"cuG_x02"          :[[-5 , 5	]	,0,0]
     ,"tc3G_x04"         :[[-1.6 , 1.6]		,0,0]
     }
- 
-SCALING_FUNC_STR = "stxs1toeft_scaling"
-COMBINE_WS = "result.root"  # <- output from text2workspace with scaling functions 
+
+"""
+SCALING_FUNC_STR = "stxstoeft_scaling"
+COMBINE_WS = "summer2019/result.root"  # <- output from text2workspace with scaling functions 
+"""
+COMBINE_WS="result.root"
+SCALING_FUNC_STR ="scaling"
+MYPARAMS = ["cG_x05","cA_x04","cu_x01","cHW_x02","cWWMinuscB_x02","cd_x01","cl"]  
+

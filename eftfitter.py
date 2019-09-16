@@ -1,14 +1,18 @@
-# Simply python fitting for STXS->EFT interpretation : 
+#Simply python fitting for STXS->EFT interpretation : 
 from scipy.optimize import minimize
 from scipy import linalg 
 import array,numpy,sys
+
+import matplotlib
+matplotlib.use('Agg')
+
 from matplotlib import pyplot as plt
 import matplotlib.cm as cm 
 
 import ROOT as r 
 
 VERB=False
-
+NSCANPOINTS=60
 
 class eft_fitter:
   def __init__(self, EFT_PARAMETERS):   # for now lets just play, user interface later
@@ -16,6 +20,8 @@ class eft_fitter:
     self.EFT_PARAMETERS = EFT_PARAMETERS 
   
     self.MODELS = []
+    self.functions = {}
+    self.doAsimov=False
 
   def processModel(self,model,decay):
 
@@ -37,12 +43,17 @@ class eft_fitter:
 
    # covert the correlation dict into a matrix 
    ccorr = []
+   #print "correlation", model.correlation
    for x in model.X.items():
     for y in model.X.items(): 
       if (x[0],y[0]) in model.correlation.keys() :
          rho = model.correlation[(x[0],y[0])]
-      else: rho = model.correlation[(y[0],x[0])] 
+      elif (y[0],x[0]) in model.correlation.keys() : rho = model.correlation[(y[0],x[0])] 
       #print x[0],y[0],rho 
+      else: 
+        if x[0]==y[0]: rho=1.
+        else: rho = 0. 
+        print "WARNING - Assuming correlation in %s (no info given) rho(%s,%s) = %g"%(model,x[0],y[0],rho)
       ccorr.append(rho)
 
    model.correlation = array.array('d',ccorr)
@@ -55,15 +66,20 @@ class eft_fitter:
    # do some squarification and inverting 
    model.nbins = len(model.X.items())
    v = model.correlation
-   model.square_correlation = [v[i:i+model.nbins] for i in range(0,len(v),model.nbins)]
+   model.square_correlation = [v[i:i+model.nbins] for i in xrange(0,len(v),model.nbins)]
    model.variance = error_vector
    model.square_covariance = [ [ model.square_correlation[i][j] * (model.variance[i]*model.variance[j])\
-				    for i in range(model.nbins)]\
-				    for j in range(model.nbins)]
+				    for i in xrange(model.nbins)]\
+				    for j in xrange(model.nbins)]
 
    model.err_mat = numpy.array(model.square_covariance)
    model.err_mat = linalg.inv(model.err_mat)
-   # finally lets make all of the names extend with _decay 
+
+   # finally - if we want an Asimov, just set the observed number to the SM one 
+   if  self.doAsimov :
+    for x in model.X.items(): 
+      x[1][2]=x[1][1]
+
    self.MODELS.append(model)
 
 
@@ -104,13 +120,23 @@ class eft_fitter:
     return [x[1][2] for x in self.X.items()]
   """
   
-  def get_x(self,vals,MINDEX,include_names=False): 
+  def get_x(self,vals,MINDEX,include_names=False):
+
+    # This function should really not define how the scaling is done -> Project for MSci to generalise
     #if VERB: print " Setting following (to recalculate STXS bins) --> " , vals
     for v in vals:
       self.EFT[v[0]][1] = v[1]
       self.w.var(v[0]).setVal(v[1])      
 
+    # note that some models may use a different naming for the SCALING function string (eg stage1 vs 1.1)
     model = self.MODELS[MINDEX] 
+    old_scalefunctionstr = self.scalefunctionstr
+    try: 
+     self.scalefunctionstr = model.scalefunctionstr
+    except: 
+     pass 
+
+    emptySet = r.RooArgSet()
     for x in model.X.items():
       names = x[1][0] 
       if not len(names) : 
@@ -120,27 +146,58 @@ class eft_fitter:
       for name in names: 
         weight = float(name[0])
 	name = name[1]
-	if "BR" in name: # in this case, we have a ratio of ratios model, expect parameter BR_hxx_BR_hyy - THIS IS VERY SPECIFIC TO SOME MODELS ! 
+	#sc = model.getScalingForProcess() <- would be nice to use the .txt files instead of the ROOT object?
+	if "R_BR" in name: # in this case, we have a ratio of ratios model, expect parameter BR_hxx_BR_hyy - THIS IS VERY SPECIFIC TO SOME MODELS (eg STXS combination)! 
 	  Bxx = name.split("BR_")[1] 
-	  Byy = name.split("BR_")[2] 
-	  nom  = self.w.function("scaling_%s"%(Bxx)).getVal(r.RooArgSet())
-	  dnom = self.w.function("scaling_%s"%(Byy)).getVal(r.RooArgSet())
+	  Byy = name.split("BR_")[2]
+	  #print "BR scaling ->", "%s_BR_%s"%(self.scalefunctionstr,Bxx)
+	  #print "BR scaling ->", "%s_BR_%s"%(self.scalefunctionstr,Byy)
+	  nom  = self.w.function("%s_BR_%s"%(self.scalefunctionstr,Bxx)).getVal(r.RooArgSet())
+	  dnom = self.w.function("%s_BR_%s"%(self.scalefunctionstr,Byy)).getVal(r.RooArgSet())
 	  sc = nom/dnom
-	else: sc = self.w.function("%s_%s_%s_13TeV"%(self.scalefunctionstr,name,model.decay)).getVal(r.RooArgSet())
+	#else: sc = self.w.function("%s_%s_%s_13TeV"%(self.scalefunctionstr,name,model.decay)).getVal(r.RooArgSet())
+	else:
+	  if len(model.decay): scaling_str = "%s_%s_%s_13TeV"%(self.scalefunctionstr,name,model.decay)
+	  else: scaling_str = "%s_%s_13TeV"%(self.scalefunctionstr,name)
+
+	  # 1 - Look in the existing functions for it 
+	  if scaling_str not in self.functions.keys(): 
+	   if (self.w.function(scaling_str)!=None):
+	     self.functions[scaling_str] = self.w.function(scaling_str)
+	   else: 
+	     # Look for the splitting of prod * dec and make a new function 
+	     print "Will need to make the scaler for ", name.split("_")
+	     prod_name  = "%s_%s"%(self.scalefunctionstr,"_".join(name.split("_")[0:-1]))
+	     decay_name = "%s_BR_%s"%(self.scalefunctionstr,name.split("_")[-1])
+	     print " Production name = ", prod_name 
+	     print " Decay name = ", decay_name
+	     if (self.w.function(prod_name)==None):  sys.exit("Error - couldn't find any way to make scaling function for %s_%s"%(name,model.decay))
+	     if (self.w.function(decay_name)==None): sys.exit("Error - couldn't find any way to make scaling function for %s_%s"%(name,model.decay))
+	     print "Creating scaling process %s in model %s --> "%(name,model), scaling_str
+	     self.w.factory("prod::%s(%s,%s)"%(scaling_str,prod_name,decay_name))
+	     self.functions[scaling_str] = self.w.function(scaling_str)
+	  #print "Looking for function -> ",scaling_str
+          sc = self.functions[scaling_str].getVal(emptySet)
+
+	#sc = self.w.function("%s_%s_%s_13TeV"%(self.scalefunctionstr,name,model.decay)).getVal(r.RooArgSet())  #-> Back to here for EFT part!
+	#sc = self.w.function("%s_%s_13TeV"%(self.scalefunctionstr,name)).getVal(r.RooArgSet())	
+	#print " at params ", vals , " ....... " 
+	#print " function ", scaling_str, " = ", sc
 	tsc+=weight*sc 
-      model.X[x[0]][1]=tsc
-    #if VERB: 
-    #  self.print_EFT()
-    #  self.print_X()
+      model.X[x[0]][1]=tsc   
+    self.scalefunctionstr = old_scalefunctionstr
     if include_names: return [(x[0]+"_"+model.decay,x[1][1]) for x in model.X.items()]
     else : return [x[1][1] for x in model.X.items()]
   
+  def get_dx(self): 
+    return 0 # currently not implemented but would be good to include derivative part (nice project for MSCi students) 
+
   def calculate_x(self,vals): 
-    if VERB: print " Setting following (to recalculate STXS bins) --> " , vals
-    for i in range(len(self.MODELS)): self.get_x(vals,i)
-    if VERB:
-     self.print_EFT()
-     self.print_X()
+    #if VERB: print " Setting following (to recalculate STXS bins) --> " , vals
+    for i in xrange(len(self.MODELS)): self.get_x(vals,i)
+    #if VERB:
+    # self.print_EFT()
+    # self.print_X()
 
   def neg_log_likelihood(self,ECFG,*args):
     #print " my current EFT ", E
@@ -160,10 +217,14 @@ class eft_fitter:
     
     return constr
  
-  def minimizer(self,rv=0,constrained=False,params_list=[]):  # params_list is now list of POI
+  def minimizer(self,rv={},constrained=False,params_list=[]):  # params_list is now list of POI
 
+   #print "Asking for minimizer constrained ==", constrained
+   #print "at fixed point ", rv
+   #print "for params", params_list
    if constrained:
-     self.EFT[params_list[0]][1]=rv
+     for i in range(len(params_list)):
+       self.EFT[params_list[i]][1]=rv[params_list[i]] 
      E=[[e[0],float(e[1][1])] for e in self.EFT.items()]
      self.calculate_x(E)
 
@@ -176,9 +237,10 @@ class eft_fitter:
    eft_keys = {"eft_keys":[i[0] for i in init_CFG]}
    init = [i[1] for i in init_CFG]
 
-   if VERB: print "My EFT parameter llist is --> ", params_list
+   if VERB: print "My EFT parameter list is --> ", params_list
    results = []
-   if params_list: results = [params_list[0],rv]
+   if params_list: 
+      results = [ [params_list[i],rv[params_list[i]]] for i in range(len(params_list)) ]
 
    if len(init) :
         bounds = [(self.EFT[v][0][0],self.EFT[v][0][1]) for v in eft_keys['eft_keys']]
@@ -218,7 +280,7 @@ class eft_fitter:
      hgr   = r.TH1F("hgr","Fitted values",M.nbins,0,M.nbins)
      hgr.SetMarkerStyle(20); hgr.SetMarkerSize(1.0); hgr.SetLineWidth(3)
      for i,x in enumerate(M.X.items()): 
-      hgr.SetBinContent(i+1,x[1][1])
+      hgr.SetBinContent(i+1,x[1][2])
       hgr.SetBinError(i+1,M.variance[i])
       hgr.GetXaxis().SetBinLabel(i+1,x[0])
       hcorr.GetXaxis().SetBinLabel(i+1,x[0])
@@ -238,6 +300,7 @@ class eft_fitter:
 
     for v in self.EFT.keys(): 
       xmin,xmax = self.EFT[v][0][0],self.EFT[v][0][1]
+      #print "Config parameter ", v, self.w.var(v)
       self.w.var(v).setMin(xmin)
       self.w.var(v).setMax(xmax)
 
@@ -258,22 +321,30 @@ class eft_fitter:
     # resets EFT parameters to 0 
     self.calculate_x([[e,self.EFT[e][2]] for e in self.EFT.keys()])
 
-  def scan2d(self, px, py): # set do_profile off here!
-    # make a 2D scan of a likelihood, don't profile other things !    
-    self.reset()
-    np = 50 
+  def scan2d(self, px, py, profile=False): # set do_profile off here!
+    # make a 2D scan of a likelihood 
+    np = NSCANPOINTS 
     pxx = self.EFT[px]
     pyy = self.EFT[py]
 
     xx = numpy.linspace(pxx[0][0],pxx[0][1],np)
     yy = numpy.linspace(pyy[0][0],pyy[0][1],np)
-
+    print " 2D scan in range " , px, " = ", pxx[0][0],"->",pxx[0][1], " x ", py, " = ", pyy[0][0], "->", pyy[0][1]
     C = []
     minll = 99999999
-    for i in range(np):
+    for i in xrange(np):
       cc = []
-      for j in range(np):
-        nll2 = 2*self.neg_log_likelihood([xx[i],yy[j]],{'eft_keys':[px,py]})
+      for j in xrange(np):
+
+        self.reset()
+	if profile: 
+         res = self.minimizer(rv={px:xx[i],py:yy[j]},constrained=True,params_list=[px,py])
+	#if res[1] < minll : minll = res[1]
+        #C.append(res[1])
+         nll2 =  res[1]
+        else :
+	 nll2 = 2*self.neg_log_likelihood([xx[i],yy[j]],{'eft_keys':[px,py]})
+
 	if nll2<minll: minll = nll2
         cc.append(nll2)
 	#print " -> ", xx[i],yy[j], nll2
@@ -281,23 +352,30 @@ class eft_fitter:
     C = numpy.array(C) 
     #print " ----> ? ", 0, 0, 2*self.neg_log_likelihood([0,0],{'eft_keys':[px,py]})
     # always start and end with a reset in any scan
-    for c in range(len(C)): 
-     for i in range(len(cc)): C[c][i] -= minll
-    self.reset()
+    for c in xrange(len(C)): 
+     for i in xrange(len(cc)): C[c][i] -= minll
 
+    self.reset()
 
     a2D = plt.subplot(111)
     conts = plt.contour(yy,xx,C,levels=[2.3,5.99], colors='b')  # the way I constructed C, y, is the faster variable (think like a matrix)
     plt.clabel(conts, fontsize=9, inline=1)
     plt.contourf(yy,xx,C,levels=numpy.arange(0,6,0.2),cmap=cm.gray)  # the way I constructed C, y, is the faster variable (think like a matrix)
-    plt.colorbar()
+    cbar = plt.colorbar()
     a2D.set_ylabel(px)
     a2D.set_xlabel(py)
+    cbar.ax.set_ylabel("$\Delta\chi^{2}$")
     a2D.axhline(0., linestyle='--', color='k') # horizontal lines
     a2D.axvline(0., linestyle='--', color='k') # vertical lines
+    plt.ylim(pxx[0][0],pxx[0][1])
+    plt.xlim(pyy[0][0],pyy[0][1])
 
-    plt.savefig("scan_2d_%s_%s.pdf"%(px,py));
-    plt.savefig("scan_2d_%s_%s.png"%(px,py));
+    if profile: 
+      plt.savefig("profile_2d_%s_%s.pdf"%(px,py));
+      plt.savefig("profile_2d_%s_%s.png"%(px,py));
+    else: 
+      plt.savefig("scan_2d_%s_%s.pdf"%(px,py));
+      plt.savefig("scan_2d_%s_%s.png"%(px,py));
     
     plt.clf()
     plt.cla()
@@ -327,7 +405,7 @@ class eft_fitter:
     minll = 9999
     for r in R : 
       if do_profile : 
-        res = self.minimizer(rv=r,constrained=True,params_list=[param])
+        res = self.minimizer(rv={param:r},constrained=True,params_list=[param])
 	if res[1] < minll : minll = res[1]
         C.append(res[1])
 	scalers.append(res[0])
@@ -358,7 +436,7 @@ class eft_fitter:
       scalers.append(scaler)
     """
     pv = self.EFT[param]
-    np = 40
+    np = NSCANPOINTS
     R = numpy.linspace(pv[0][0],pv[0][1],np)
 
     C_RES_PROF  = self.scan_LH(param,R,1)
@@ -374,7 +452,7 @@ class eft_fitter:
     ax1.plot(R,C_prof,color='black',linewidth=3,linestyle='-',label="Profiled")
     ax1.plot(R,C_fixed,color='black',linewidth=3,linestyle='--',label="Scan")
 
-    ax1.set_ylabel("$\chi^{2}$",fontsize=20)
+    ax1.set_ylabel("$\Delta\chi^{2}$",fontsize=20)
     ax1.set_xlabel("%s"%param,fontsize=20)
     #plt.show()
     #if param in ["cG_x04","cHW_x02"]: 
@@ -392,12 +470,12 @@ class eft_fitter:
       
       #for i,x in enumerate(self.X.items()): ax2.plot(R,[scalers[j][i] for j in range(len(R))], label=x[0])
       ax2.set_ylabel("Profiled EFT coeff.")
-      ax2.legend(fontsize=9,loc=0)
+      ax2.legend(fontsize=9,loc='upper right')
 
     ax1.axvline(0., linestyle='--', color='k') 
     ax1.axhline(1., linestyle='--', color='r') # horizontal lines
     ax1.axhline(4., linestyle='--', color='r') # horizontal lines
-    ax1.legend(fontsize=9,loc=1)
+    ax1.legend(fontsize=9,loc='upper left')
    
     plt.savefig("%s.pdf"%(param))
     plt.savefig("%s.png"%(param))
@@ -407,7 +485,7 @@ class eft_fitter:
     plt.close()
 
     fig, ax1 = plt.subplots()
-    styles = [".","v","+","o","*"]
+    styles = [".","v","+","o","*","s","x","p"]
     if len(scaling_functions): 
       scalers = []
       for P in [ p[0] for p in scaling_functions[0] ]: scalers.append(P)
@@ -418,10 +496,10 @@ class eft_fitter:
       ax1.set_ylabel("$\mu$",fontsize=20)
       ax1.set_xlabel("%s"%param,fontsize=20)
       box = ax1.get_position()
-      ax1.set_position([box.x0, box.y0, box.width * 0.8, box.height])
+      ax1.set_position([box.x0*0.8, box.y0, box.width * 0.7, box.height])
 
       # Put a legend to the right of the current axis
-      ax1.legend(loc='center left', bbox_to_anchor=(1, 0.5),fontsize=7)
+      ax1.legend(loc='center left', bbox_to_anchor=(1, 0.5),fontsize=6,ncol=2)
       plt.savefig("stxs_scaling_vs_%s.pdf"%(param))
       plt.savefig("stxs_scaling_vs_%s.png"%(param))
       
