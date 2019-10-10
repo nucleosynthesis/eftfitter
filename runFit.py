@@ -13,7 +13,7 @@ import parameters_config_EFT as pconfig
 #import summer2019.HIG_19_001 as HIG_19_001 
 #import summer2019.HIG_17_035 as HIG_17_035 
 
-import HIG_17_031.HIG_17_031  as comb2016
+import HIG_17_031  as comb2016
 ################# Pick set of parameters (POI set)
 
 EFT_PARAMETERS = pconfig.MYPARAMS
