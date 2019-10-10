@@ -1,3 +1,5 @@
+MSci student stuff
+
 Simple chi2 fits for H-EFT interpretation 
 
 Based on [LHCHXSWG-INT-2017-01](https://cds.cern.ch/record/2290628/files/LHCHXSWG-INT-2017-001.pdf)
