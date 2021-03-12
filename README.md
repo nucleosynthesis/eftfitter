@@ -1,3 +1,6 @@
+**THIS TOOL IS DEPRECATED**. The code has moved to [EFT-fitter](https://github.com/jonathon-langford/EFT-Fitter)
+
+
 Simple chi2 fits for H-EFT interpretation 
 
 Based on [LHCHXSWG-INT-2017-01](https://cds.cern.ch/record/2290628/files/LHCHXSWG-INT-2017-001.pdf)
@@ -17,4 +20,3 @@ Inside `runFit.py`, you can decide whether or not to run those scans or do a glo
 
 If you want to fit another model (eg the kappa framework) you need to make a new `parameters_config.py` for it and set the names of the scaling functions prefix (`SCALING_FUNC_STR`) and input root file (`COMBINE_WS`) accordingly. 
 
-**THIS TOOL IS DEPRECATED**. The code has moved to [EFT-fitter](https://github.com/jonathon-langford/EFT-Fitter)
